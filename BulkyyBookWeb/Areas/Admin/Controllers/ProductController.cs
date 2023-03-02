@@ -9,17 +9,17 @@ namespace BulkyBookWeb.Areas.Admin.Controllers;
 public class ProductController : Controller
 {
     private readonly IUnitOfWork _unitWork;
+    private readonly IWebHostEnvironment _hostEnvironment;
 
-    public ProductController(IUnitOfWork unit)
+    public ProductController(IUnitOfWork unit, IWebHostEnvironment hostEnvironment)
     {
         _unitWork = unit;
+        _hostEnvironment = hostEnvironment;
     }
 
     public IActionResult Index()
     {
-        List<Product> objList = _unitWork.Product.GetAll().ToList();
-
-        return View(objList);
+        return View();
     }
 
     public IActionResult Upsert(int? id)
@@ -58,14 +58,30 @@ public class ProductController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public IActionResult Upsert(Product obj)
+    public IActionResult Upsert(ProductVM obj, IFormFile? file)
     {
         if (ModelState.IsValid)
         {
-            _unitWork.Product.Update(obj);
+            string wwwroot = _hostEnvironment.WebRootPath;
+
+            if (file != null)
+            {
+                string fileName = Guid.NewGuid().ToString() + "_" + Path.GetFileNameWithoutExtension(file.FileName);
+                var uploads = Path.Combine(wwwroot, @"images\products");
+                var extension = Path.GetExtension(file.FileName);
+
+                using (var fileStream = new FileStream(Path.Combine(uploads, fileName + extension), FileMode.Create))
+                {
+                    file.CopyTo(fileStream);
+                }
+
+                obj.Product.ImageURL = @"\images\products\" + fileName + extension;
+            }
+
+            _unitWork.Product.Add(obj.Product);
             _unitWork.Save();
 
-            TempData["success"] = "Cover Type was updated successfully.";
+            TempData["success"] = "Product created successfully.";
 
             return RedirectToAction("Index");
         }
@@ -101,4 +117,17 @@ public class ProductController : Controller
 
         return RedirectToAction("Index");
     }
+
+    #region API Calls
+
+    [HttpGet]
+    public IActionResult GetAll()
+    {
+        var productList = _unitWork.Product.GetAll(
+            includeProperties: "Category,CoverType");
+
+        return Json(new { data = productList });
+    }
+
+    #endregion
 }
