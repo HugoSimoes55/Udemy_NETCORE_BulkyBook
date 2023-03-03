@@ -32,17 +32,17 @@ public class Product
 
     [Required]
     [Range(1, 10000)]
-    [DisplayName("Price for 1-49")]
+    [DisplayName("Price for 1-50")]
     public decimal Price { get; set; }
 
     [Required]
     [Range(1, 10000)]
-    [DisplayName("Price for 50-99")]
+    [DisplayName("Price for 51-100")]
     public decimal Price50 { get; set; }
 
     [Required]
     [Range(1, 10000)]
-    [DisplayName("Price for 100+")]
+    [DisplayName("Price for 101+")]
     public decimal Price100 { get; set; }
 
     [ValidateNever]
