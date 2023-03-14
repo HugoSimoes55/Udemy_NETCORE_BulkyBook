@@ -32,9 +32,15 @@ public class CartController : Controller
         foreach (var cart in cartVM.ListCart)
         {
             cart.Price = GetPriceBasedOnQuatity(cart.Count, cart.Product.Price, cart.Product.Price50, cart.Product.Price100);
+            cartVM.CartTotal += cart.Price * cart.Count;
         }
 
         return View(cartVM);
+    }
+
+    public IActionResult Summary()
+    {
+        return View();
     }
 
     private decimal GetPriceBasedOnQuatity(int quant, decimal price, decimal price50, decimal price100)
@@ -51,5 +57,43 @@ public class CartController : Controller
         {
             return price100;
         }
+    }
+
+    public IActionResult Plus(int cartId)
+    {
+        var cart = _unitOfWork.ShoppingCart.GetFirstOrDefault(l => l.Id == cartId);
+
+        _unitOfWork.ShoppingCart.IncrementCount(cart, 1);
+        _unitOfWork.Save();
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    public IActionResult Minus(int cartId)
+    {
+        var cart = _unitOfWork.ShoppingCart.GetFirstOrDefault(l => l.Id == cartId);
+
+        if (cart.Count <= 1)
+        {
+            _unitOfWork.ShoppingCart.Remove(cart);
+        }
+        else
+        {
+            _unitOfWork.ShoppingCart.DecrementCount(cart, 1);
+        }
+
+        _unitOfWork.Save();
+
+        return RedirectToAction(nameof(Index));
+    }
+
+    public IActionResult Remove(int cartId)
+    {
+        var cart = _unitOfWork.ShoppingCart.GetFirstOrDefault(l => l.Id == cartId);
+
+        _unitOfWork.ShoppingCart.Remove(cart);
+        _unitOfWork.Save();
+
+        return RedirectToAction(nameof(Index));
     }
 }
