@@ -10,5 +10,5 @@ public class ShoppingCartVM
 {
     public IEnumerable<ShoppingCart> ListCart { get; set; }
 
-    public decimal CartTotal { get; set; }
+    public OrderHeader OrderHeader { get; set; }
 }
