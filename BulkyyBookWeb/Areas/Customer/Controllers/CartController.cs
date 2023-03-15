@@ -109,10 +109,47 @@ public class CartController : Controller
             _unitOfWork.Save();
         }
 
-        _unitOfWork.ShoppingCart.RemoveRange(cartVM.ListCart);
+        //////////
+        // Stripe code would be added here - Find by looking up "Checkout" in Stripe Documentation
+        //////////
+
+
+        bool successfulTransaction = true;
+
+        if (successfulTransaction)
+        {
+            _unitOfWork.OrderHeader.UpdateStripePaymentIds(cartVM.OrderHeader.Id, Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+
+            return RedirectToAction("OrderConfirmation", "Cart", new { orderHeaderId = cartVM.OrderHeader.Id });
+        }
+
+        return RedirectToAction("Index");
+    }
+
+    public IActionResult OrderConfirmation(int orderHeaderId)
+    {
+        OrderHeader orderHeader = _unitOfWork.OrderHeader.GetFirstOrDefault(l => l.Id == orderHeaderId);
+
+        //Add Stripe Get Session Code
+        bool paymentPaid = true;
+
+        if (paymentPaid)
+        {
+            _unitOfWork.OrderHeader.UpdateStatus(orderHeaderId, SD.StatusApproved, SD.PaymentStatusApproved);
+            _unitOfWork.Save();
+        }
+
+
+        List<ShoppingCart> shoppingCarts = _unitOfWork.ShoppingCart.GetAll(l => l.ApplicationUserId == orderHeader.ApplicationUserId).ToList();
+
+
+        _unitOfWork.ShoppingCart.RemoveRange(shoppingCarts);
         _unitOfWork.Save();
 
-        return RedirectToAction("Index", "Home");
+
+        //return RedirectToAction("Index");
+
+        return View(orderHeaderId);
     }
 
     private decimal GetPriceBasedOnQuatity(int quant, decimal price, decimal price50, decimal price100)
