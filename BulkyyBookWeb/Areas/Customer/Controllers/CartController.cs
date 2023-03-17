@@ -80,8 +80,6 @@ public class CartController : Controller
 
         cartVM.ListCart = _unitOfWork.ShoppingCart.GetAll(l => l.ApplicationUserId == claim.Value, includeProperties: "Product");
 
-        cartVM.OrderHeader.PaymentStatus = SD.PaymentStatusPending;
-        cartVM.OrderHeader.OrderStatus = SD.StatusPending;
         cartVM.OrderHeader.OrderDate = DateTime.Now;
         cartVM.OrderHeader.ApplicationUserId = claim.Value;
 
@@ -90,6 +88,19 @@ public class CartController : Controller
         {
             cart.Price = GetPriceBasedOnQuatity(cart.Count, cart.Product.Price, cart.Product.Price50, cart.Product.Price100);
             cartVM.OrderHeader.OrderTotal += cart.Price * cart.Count;
+        }
+
+        ApplicationUser appUser = _unitOfWork.ApplicationUser.GetFirstOrDefault(l => l.Id == claim.Value);
+
+        if (appUser.CompanyId.GetValueOrDefault() == 0)
+        {
+            cartVM.OrderHeader.PaymentStatus = SD.PaymentStatusPending;
+            cartVM.OrderHeader.OrderStatus = SD.StatusPending;
+        }
+        else
+        {
+            cartVM.OrderHeader.PaymentStatus = SD.PaymentStatusDelayedPayment;
+            cartVM.OrderHeader.OrderStatus = SD.StatusApproved;
         }
 
         _unitOfWork.OrderHeader.Add(cartVM.OrderHeader);
@@ -109,17 +120,25 @@ public class CartController : Controller
             _unitOfWork.Save();
         }
 
-        //////////
-        // Stripe code would be added here - Find by looking up "Checkout" in Stripe Documentation
-        //////////
 
-
-        bool successfulTransaction = true;
-
-        if (successfulTransaction)
+        if (appUser.CompanyId.GetValueOrDefault() == 0)
         {
-            _unitOfWork.OrderHeader.UpdateStripePaymentIds(cartVM.OrderHeader.Id, Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+            //////////
+            // Stripe code would be added here - Find by looking up "Checkout" in Stripe Documentation
+            //////////
 
+
+            bool successfulTransaction = true;
+
+            if (successfulTransaction)
+            {
+                _unitOfWork.OrderHeader.UpdateStripePaymentIds(cartVM.OrderHeader.Id, Guid.NewGuid().ToString(), Guid.NewGuid().ToString());
+
+                return RedirectToAction("OrderConfirmation", "Cart", new { orderHeaderId = cartVM.OrderHeader.Id });
+            }
+        }
+        else
+        {
             return RedirectToAction("OrderConfirmation", "Cart", new { orderHeaderId = cartVM.OrderHeader.Id });
         }
 
@@ -130,24 +149,23 @@ public class CartController : Controller
     {
         OrderHeader orderHeader = _unitOfWork.OrderHeader.GetFirstOrDefault(l => l.Id == orderHeaderId);
 
-        //Add Stripe Get Session Code
-        bool paymentPaid = true;
-
-        if (paymentPaid)
+        if (orderHeader.PaymentStatus != SD.PaymentStatusDelayedPayment)
         {
-            _unitOfWork.OrderHeader.UpdateStatus(orderHeaderId, SD.StatusApproved, SD.PaymentStatusApproved);
-            _unitOfWork.Save();
-        }
+            //Add Stripe Get Session Code
+            bool paymentPaid = true;
 
+            if (paymentPaid)
+            {
+                _unitOfWork.OrderHeader.UpdateStatus(orderHeaderId, SD.StatusApproved, SD.PaymentStatusApproved);
+                _unitOfWork.Save();
+            }
+        }
 
         List<ShoppingCart> shoppingCarts = _unitOfWork.ShoppingCart.GetAll(l => l.ApplicationUserId == orderHeader.ApplicationUserId).ToList();
 
 
         _unitOfWork.ShoppingCart.RemoveRange(shoppingCarts);
         _unitOfWork.Save();
-
-
-        //return RedirectToAction("Index");
 
         return View(orderHeaderId);
     }
