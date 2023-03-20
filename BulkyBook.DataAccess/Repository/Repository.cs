@@ -19,6 +19,7 @@ namespace BulkyBook.DataAccess.Repository
         public Repository(ApplicationDbContext db)
         {
             _db = db;
+            //_db.ShoppingCarts.AsNoTracking().FirstOrDefault
             this.dbSet = _db.Set<T>();
         }
 
@@ -42,9 +43,18 @@ namespace BulkyBook.DataAccess.Repository
             return query.ToList();
         }
 
-        public T GetFirstOrDefault(Expression<Func<T, bool>> filter, string? includeProperties = null)
+        public T GetFirstOrDefault(Expression<Func<T, bool>> filter, string? includeProperties = null, bool tracked = true)
         {
-            IQueryable<T> query = dbSet;
+            IQueryable<T> query;
+
+            if (tracked)
+            {
+                query = dbSet;
+            }
+            else
+            {
+                query = dbSet.AsNoTracking();
+            }
 
             query = query.Where(filter);
 
