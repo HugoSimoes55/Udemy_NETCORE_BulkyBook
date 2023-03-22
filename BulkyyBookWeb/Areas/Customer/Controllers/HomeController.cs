@@ -1,5 +1,6 @@
 ﻿using BulkyBook.DataAccess.Repository.IRepository;
 using BulkyBook.Models;
+using BulkyBook.Utility;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
@@ -53,13 +54,14 @@ public class HomeController : Controller
         if (cartFromDB == null)
         {
             _unitOfWork.ShoppingCart.Add(shopCart);
+            _unitOfWork.Save();
+            HttpContext.Session.SetInt32(SD.SessionCart, _unitOfWork.ShoppingCart.GetAll(l => l.ApplicationUserId == claim.Value).ToList().Count);
         }
         else
         {
             _unitOfWork.ShoppingCart.IncrementCount(cartFromDB, shopCart.Count);
+            _unitOfWork.Save();
         }
-
-        _unitOfWork.Save();
 
         return RedirectToAction(nameof(Index));
     }
