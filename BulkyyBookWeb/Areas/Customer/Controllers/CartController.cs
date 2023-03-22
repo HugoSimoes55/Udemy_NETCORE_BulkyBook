@@ -167,6 +167,8 @@ public class CartController : Controller
         _unitOfWork.ShoppingCart.RemoveRange(shoppingCarts);
         _unitOfWork.Save();
 
+        HttpContext.Session.SetInt32(SD.SessionCart, 0);
+
         return View(orderHeaderId);
     }
 
